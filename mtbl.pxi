@@ -74,3 +74,16 @@ cdef extern from "mtbl.h":
     mtbl_merger_options *mtbl_merger_options_init()
     void mtbl_merger_options_destroy(mtbl_merger_options **)
     void mtbl_merger_options_set_merge_func(mtbl_merger_options *, mtbl_merge_func, void *)
+
+    # sorter
+    mtbl_sorter *mtbl_sorter_init(mtbl_sorter_options *)
+    void mtbl_sorter_destroy(mtbl_sorter **)
+    mtbl_res mtbl_sorter_add(mtbl_sorter *, uint8_t *, size_t, uint8_t *, size_t)
+    mtbl_res mtbl_sorter_write(mtbl_sorter *, mtbl_writer *)
+    mtbl_iter *mtbl_sorter_iter(mtbl_sorter *)
+
+    mtbl_sorter_options *mtbl_sorter_options_init()
+    void mtbl_sorter_options_destroy(mtbl_sorter_options **)
+    void mtbl_sorter_options_set_merge_func(mtbl_sorter_options *, mtbl_merge_func, void *)
+    void mtbl_sorter_options_set_temp_dir(mtbl_sorter_options *, char *)
+    void mtbl_sorter_options_set_max_memory(mtbl_sorter_options *, size_t)

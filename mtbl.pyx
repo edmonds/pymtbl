@@ -1,5 +1,8 @@
 include "mtbl.pxi"
 
+DEFAULT_SORTER_TEMP_DIR = '/var/tmp'
+DEFAULT_SORTER_MEMORY = 1073741824
+
 COMPRESSION_NONE = MTBL_COMPRESSION_NONE
 COMPRESSION_SNAPPY = MTBL_COMPRESSION_SNAPPY
 COMPRESSION_ZLIB = MTBL_COMPRESSION_ZLIB
@@ -346,3 +349,64 @@ cdef class merger(object):
 
     def iteritems(self):
         return get_iteritems(mtbl_merger_iter(self._instance))
+
+cdef class sorter(object):
+    cdef mtbl_sorter *_instance
+
+    def __cinit__(self):
+        self._instance = NULL
+
+    def __dealloc__(self):
+        mtbl_sorter_destroy(&self._instance)
+
+    def __init__(self,
+                 object merge_func,
+                 bytes temp_dir=DEFAULT_SORTER_TEMP_DIR,
+                 size_t max_memory=DEFAULT_SORTER_MEMORY):
+        cdef mtbl_sorter_options *opt
+        opt = mtbl_sorter_options_init()
+        mtbl_sorter_options_set_merge_func(opt,
+                                           <mtbl_merge_func> merge_func_wrapper,
+                                           <void *> merge_func)
+        mtbl_sorter_options_set_temp_dir(opt, temp_dir)
+        mtbl_sorter_options_set_max_memory(opt, max_memory)
+        self._instance = mtbl_sorter_init(opt)
+        mtbl_sorter_options_destroy(&opt)
+
+    def write(self, writer w):
+        cdef mtbl_res res
+
+        res = mtbl_sorter_write(self._instance, w._instance)
+        if res != mtbl_res_success:
+            raise RuntimeError
+
+    def __setitem__(self, bytes py_key, bytes py_val):
+        cdef mtbl_res res
+        cdef uint8_t *key
+        cdef uint8_t *val
+        cdef size_t len_key
+        cdef size_t len_val
+
+        if self._instance == NULL:
+            raise RuntimeError
+
+        key = <uint8_t *> PyString_AsString(py_key)
+        val = <uint8_t *> PyString_AsString(py_val)
+        len_key = PyString_Size(py_key)
+        len_val = PyString_Size(py_val)
+
+        res = mtbl_sorter_add(self._instance, key, len_key, val, len_val)
+        if res == mtbl_res_failure:
+            raise KeyOrderError
+
+    def __iter__(self):
+        return self.iterkeys()
+
+    def iterkeys(self):
+        return get_iterkeys(mtbl_sorter_iter(self._instance))
+
+    def itervalues(self):
+        return get_itervalues(mtbl_sorter_iter(self._instance))
+
+    def iteritems(self):
+        return get_iteritems(mtbl_sorter_iter(self._instance))
