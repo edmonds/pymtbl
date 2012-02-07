@@ -189,27 +189,15 @@ cdef class reader(DictMixin):
 
     def iterkeys(self):
         self.check_initialized()
-        it = iterkeys()
-        it._instance = mtbl_reader_iter(self._instance)
-        if it._instance == NULL:
-            raise IterException
-        return it
+        return get_iterkeys(mtbl_reader_iter(self._instance))
 
     def itervalues(self):
         self.check_initialized()
-        it = itervalues()
-        it._instance = mtbl_reader_iter(self._instance)
-        if it._instance == NULL:
-            raise IterException
-        return it
+        return get_itervalues(mtbl_reader_iter(self._instance))
 
     def iteritems(self):
         self.check_initialized()
-        it = iteritems()
-        it._instance = mtbl_reader_iter(self._instance)
-        if it._instance == NULL:
-            raise IterException
-        return it
+        return get_iteritems(mtbl_reader_iter(self._instance))
 
     def __contains__(self, bytes py_key):
         try:
