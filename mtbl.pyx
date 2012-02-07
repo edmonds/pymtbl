@@ -1,15 +1,22 @@
 include "mtbl.pxi"
 
-class MtblException(Exception):
+COMPRESSION_NONE = MTBL_COMPRESSION_NONE
+COMPRESSION_SNAPPY = MTBL_COMPRESSION_SNAPPY
+COMPRESSION_ZLIB = MTBL_COMPRESSION_ZLIB
+
+class IterException(Exception):
     pass
 
-class MtblIterException(Exception):
+class KeyOrderError(Exception):
     pass
 
-class MtblOpenException(Exception):
+class TableClosedException(Exception):
     pass
 
-MtblImmutableError = TypeError('object does not support item mutation')
+class UnknownCompressionTypeException(Exception):
+    pass
+
+ImmutableError = TypeError('object does not support mutation')
 
 @cython.internal
 cdef class iterkeys(object):
@@ -120,19 +127,19 @@ cdef class DictMixin(object):
         return [ v for v in self.itervalues() ]
 
     def __delitem__(self, key):
-        raise MtblImmutableError
+        raise ImmutableError
 
     def __setitem__(self, key, value):
-        raise MtblImmutableError
+        raise ImmutableError
 
     def pop(self, *a, **b):
-        raise MtblImmutableError
+        raise ImmutableError
 
     def popitem(self):
-        raise MtblImmutableError
+        raise ImmutableError
 
     def update(self, *a, **b):
-        raise MtblImmutableError
+        raise ImmutableError
 
 cdef class reader(DictMixin):
     cdef mtbl_reader *_instance
@@ -156,21 +163,21 @@ cdef class reader(DictMixin):
         it = iterkeys()
         it._instance = mtbl_reader_iter(self._instance)
         if it._instance == NULL:
-            raise MtblIterException
+            raise IterException
         return it
 
     def itervalues(self):
         it = itervalues()
         it._instance = mtbl_reader_iter(self._instance)
         if it._instance == NULL:
-            raise MtblIterException
+            raise IterException
         return it
 
     def iteritems(self):
         it = iteritems()
         it._instance = mtbl_reader_iter(self._instance)
         if it._instance == NULL:
-            raise MtblIterException
+            raise IterException
         return it
 
     def __contains__(self, bytes py_key):
@@ -205,3 +212,54 @@ cdef class reader(DictMixin):
         if res == mtbl_res_success:
             return PyString_FromStringAndSize(<char *> val, len_val)
         raise KeyError(py_key)
+
+cdef class writer(object):
+    cdef mtbl_writer *_instance
+
+    def __cinit__(self):
+        self._instance = NULL
+
+    def __dealloc__(self):
+        mtbl_writer_destroy(&self._instance)
+
+    def __init__(self,
+            bytes fname,
+            mtbl_compression_type compression=MTBL_COMPRESSION_NONE,
+            size_t block_size=8192,
+            size_t block_restart_interval=16):
+        if not (compression == COMPRESSION_NONE or
+                compression == COMPRESSION_SNAPPY or
+                compression == COMPRESSION_ZLIB):
+            raise UnknownCompressionTypeException
+
+        cdef mtbl_writer_options *opt
+        opt = mtbl_writer_options_init()
+        mtbl_writer_options_set_compression(opt, compression)
+        mtbl_writer_options_set_block_size(opt, block_size)
+        mtbl_writer_options_set_block_restart_interval(opt, block_restart_interval)
+        self._instance = mtbl_writer_init(fname, opt)
+        mtbl_writer_options_destroy(&opt)
+        if self._instance == NULL:
+            raise IOError("unable to initialize file: '%s'" % fname)
+
+    def close(self):
+        mtbl_writer_destroy(&self._instance)
+
+    def __setitem__(self, bytes py_key, bytes py_val):
+        cdef mtbl_res res
+        cdef uint8_t *key
+        cdef uint8_t *val
+        cdef size_t len_key
+        cdef size_t len_val
+
+        if self._instance == NULL:
+            raise TableClosedException
+
+        key = <uint8_t *> PyString_AsString(py_key)
+        val = <uint8_t *> PyString_AsString(py_val)
+        len_key = PyString_Size(py_key)
+        len_val = PyString_Size(py_val)
+
+        res = mtbl_writer_add(self._instance, key, len_key, val, len_val)
+        if res == mtbl_res_failure:
+            raise KeyOrderError
