@@ -47,7 +47,7 @@ def main(fname, num_keys):
     )
 
 def usage():
-    sys.stderr.write('Usage: %s <MTBL FILENAME> <NUMBER OF KEYS>\n' % sys.argv[0])
+    sys.stderr.write('Usage: %s <MTBL FILENAME> <MAX NUMBER OF KEYS>\n' % sys.argv[0])
     sys.exit(1)
 
 if __name__ == '__main__':
