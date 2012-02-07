@@ -16,6 +16,9 @@ class TableClosedException(Exception):
 class UnknownCompressionTypeException(Exception):
     pass
 
+class UninitializedException(Exception):
+    pass
+
 ImmutableError = TypeError('object does not support mutation')
 
 @cython.internal
@@ -109,6 +112,27 @@ cdef class iteritems(object):
         return (PyString_FromStringAndSize(<char *> key, len_key),
                 PyString_FromStringAndSize(<char *> val, len_val))
 
+cdef get_iterkeys(mtbl_iter *instance):
+    if instance == NULL:
+        raise IterException
+    it = iterkeys()
+    it._instance = instance
+    return it
+
+cdef get_itervalues(mtbl_iter *instance):
+    if instance == NULL:
+        raise IterException
+    it = itervalues()
+    it._instance = instance
+    return it
+
+cdef get_iteritems(mtbl_iter *instance):
+    if instance == NULL:
+        raise IterException
+    it = iteritems()
+    it._instance = instance
+    return it
+
 @cython.internal
 cdef class DictMixin(object):
     def __iter__(self):
@@ -159,7 +183,12 @@ cdef class reader(DictMixin):
         if (self._instance == NULL):
             raise IOError("unable to open file: '%s'" % fname)
 
+    def check_initialized(self):
+        if self._instance == NULL:
+            raise UninitializedException
+
     def iterkeys(self):
+        self.check_initialized()
         it = iterkeys()
         it._instance = mtbl_reader_iter(self._instance)
         if it._instance == NULL:
@@ -167,6 +196,7 @@ cdef class reader(DictMixin):
         return it
 
     def itervalues(self):
+        self.check_initialized()
         it = itervalues()
         it._instance = mtbl_reader_iter(self._instance)
         if it._instance == NULL:
@@ -174,6 +204,7 @@ cdef class reader(DictMixin):
         return it
 
     def iteritems(self):
+        self.check_initialized()
         it = iteritems()
         it._instance = mtbl_reader_iter(self._instance)
         if it._instance == NULL:
@@ -204,6 +235,8 @@ cdef class reader(DictMixin):
         cdef uint8_t *val
         cdef size_t len_key
         cdef size_t len_val
+
+        self.check_initialized()
 
         key = <uint8_t *> PyString_AsString(py_key)
         len_key = PyString_Size(py_key)
@@ -263,3 +296,65 @@ cdef class writer(object):
         res = mtbl_writer_add(self._instance, key, len_key, val, len_val)
         if res == mtbl_res_failure:
             raise KeyOrderError
+
+cdef void merge_func_wrapper(void *clos,
+        uint8_t *key, size_t len_key,
+        uint8_t *val0, uint8_t len_val0,
+        uint8_t *val1, uint8_t len_val1,
+        uint8_t **merged_val, size_t *len_merged_val) with gil:
+    cdef str py_key
+    cdef str py_val0
+    cdef str py_val1
+    cdef str py_merged_val
+    py_key = PyString_FromStringAndSize(<char *> key, len_key)
+    py_val0 = PyString_FromStringAndSize(<char *> val0, len_val0)
+    py_val1 = PyString_FromStringAndSize(<char *> val1, len_val1)
+    py_merged_val = (<object> clos)(py_key, py_val0, py_val1)
+    len_merged_val[0] = <size_t> PyString_Size(py_merged_val)
+    merged_val[0] = <uint8_t *> malloc(len_merged_val[0])
+    memcpy(merged_val[0], PyString_AsString(py_merged_val), len_merged_val[0])
+
+cdef class merger(object):
+    cdef mtbl_merger *_instance
+
+    def __cinit__(self):
+        self._instance = NULL
+
+    def __dealloc__(self):
+        mtbl_merger_destroy(&self._instance)
+
+    def __init__(self, object merge_func):
+        cdef mtbl_merger_options *opt
+        opt = mtbl_merger_options_init()
+        mtbl_merger_options_set_merge_func(opt,
+                                           <mtbl_merge_func> merge_func_wrapper,
+                                           <void *> merge_func)
+        self._instance = mtbl_merger_init(opt)
+        mtbl_merger_options_destroy(&opt)
+
+    def add_reader(self, reader r):
+        cdef mtbl_res res
+
+        res = mtbl_merger_add_reader(self._instance, r._instance)
+        if res != mtbl_res_success:
+            raise RuntimeError
+        r._instance = NULL
+
+    def write(self, writer w):
+        cdef mtbl_res res
+
+        res = mtbl_merger_write(self._instance, w._instance)
+        if res != mtbl_res_success:
+            raise RuntimeError
+
+    def __iter__(self):
+        return self.iterkeys()
+
+    def iterkeys(self):
+        return get_iterkeys(mtbl_merger_iter(self._instance))
+
+    def itervalues(self):
+        return get_itervalues(mtbl_merger_iter(self._instance))
+
+    def iteritems(self):
+        return get_iteritems(mtbl_merger_iter(self._instance))
