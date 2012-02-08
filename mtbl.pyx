@@ -220,6 +220,34 @@ cdef class reader(DictMixin):
             pass
         return default
 
+    def get_range(self, bytes py_key0, bytes py_key1):
+        cdef mtbl_res res
+        cdef uint8_t *key0
+        cdef uint8_t *key1
+        cdef size_t len_key0
+        cdef size_t len_key1
+
+        self.check_initialized()
+
+        key0 = <uint8_t *> PyString_AsString(py_key0)
+        key1 = <uint8_t *> PyString_AsString(py_key1)
+        len_key0 = PyString_Size(py_key0)
+        len_key1 = PyString_Size(py_key1)
+
+        return get_iteritems(mtbl_reader_get_range(self._instance, key0, len_key0, key1, len_key1))
+
+    def get_prefix(self, bytes py_key):
+        cdef mtbl_res res
+        cdef uint8_t *key
+        cdef size_t len_key
+
+        self.check_initialized()
+
+        key = <uint8_t *> PyString_AsString(py_key)
+        len_key = PyString_Size(py_key)
+
+        return get_iteritems(mtbl_reader_get_prefix(self._instance, key, len_key))
+
     def __getitem__(self, bytes py_key):
         cdef mtbl_res res
         cdef uint8_t *key
