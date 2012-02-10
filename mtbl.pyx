@@ -316,6 +316,10 @@ cdef class writer(object):
         if res == mtbl_res_failure:
             raise KeyOrderError
 
+    def __delitem__(self, key):
+        """will raise ImmutableError"""
+        raise ImmutableError
+
 cdef void merge_func_wrapper(void *clos,
         uint8_t *key, size_t len_key,
         uint8_t *val0, uint8_t len_val0,
@@ -426,6 +430,10 @@ cdef class sorter(object):
         res = mtbl_sorter_add(self._instance, key, len_key, val, len_val)
         if res == mtbl_res_failure:
             raise KeyOrderError
+
+    def __delitem__(self, key):
+        """will raise ImmutableError"""
+        raise ImmutableError
 
     def __iter__(self):
         return self.iterkeys()
