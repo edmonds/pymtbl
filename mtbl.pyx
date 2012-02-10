@@ -145,30 +145,44 @@ cdef class DictMixin(object):
         return self.iterkeys()
 
     def items(self):
+        """D.items() -> list of D's (key, value) pairs, as 2-tuples"""
         return [ (k, v) for k, v in self.iteritems() ]
 
     def keys(self):
+        """D.keys() -> list of D's keys"""
         return [ k for k in self.iterkeys() ]
 
     def values(self):
+        """D.values() -> list of D's values"""
         return [ v for v in self.itervalues() ]
 
     def __delitem__(self, key):
+        """will raise ImmutableError"""
         raise ImmutableError
 
     def __setitem__(self, key, value):
+        """will raise ImmutableError"""
         raise ImmutableError
 
     def pop(self, *a, **b):
+        """will raise ImmutableError"""
         raise ImmutableError
 
     def popitem(self):
+        """will raise ImmutableError"""
         raise ImmutableError
 
     def update(self, *a, **b):
+        """will raise ImmutableError"""
         raise ImmutableError
 
 cdef class reader(DictMixin):
+    """
+    reader(fname) -> new MTBL reader initialized from file fname
+
+    Keyword arguments:
+    verify_checksums -- whether to verify data block checksums (default False)
+    """
     cdef mtbl_reader *_instance
 
     def __cinit__(self):
@@ -191,18 +205,22 @@ cdef class reader(DictMixin):
             raise UninitializedException
 
     def iterkeys(self):
+        """R.iterkeys() -> an iterator over the keys of R."""
         self.check_initialized()
         return get_iterkeys(mtbl_reader_iter(self._instance))
 
     def itervalues(self):
+        """R.itervalues() -> an iterator over the values of R."""
         self.check_initialized()
         return get_itervalues(mtbl_reader_iter(self._instance))
 
     def iteritems(self):
+        """R.iteritems() -> an iterator over the (key, value) items of R."""
         self.check_initialized()
         return get_iteritems(mtbl_reader_iter(self._instance))
 
     def __contains__(self, bytes py_key):
+        """R.__contains__(k) -> True if R has a key k, else False"""
         try:
             self.__getitem__(py_key)
             return True
@@ -211,9 +229,11 @@ cdef class reader(DictMixin):
         return False
 
     def has_key(self, bytes py_key):
+        """R.has_key(k) -> True if R has a key k, else False."""
         return self.__contains__(py_key)
 
     def get(self, bytes py_key, default=None):
+        """R.get(k[,d]) -> R[k] if k in R, else d.  d defaults to None."""
         try:
             return self.__getitem__(py_key)
         except KeyError:
@@ -221,6 +241,10 @@ cdef class reader(DictMixin):
         return default
 
     def get_range(self, bytes py_key0, bytes py_key1):
+        """
+        R.get_range(key0, key1) -> an iterator over all (key, value) items in R where key is
+        between key0 and key1 inclusive.
+        """
         cdef mtbl_res res
         cdef uint8_t *key0
         cdef uint8_t *key1
@@ -237,6 +261,10 @@ cdef class reader(DictMixin):
         return get_iteritems(mtbl_reader_get_range(self._instance, key0, len_key0, key1, len_key1))
 
     def get_prefix(self, bytes py_key):
+        """
+        R.get_prefix(key_prefix) -> an iterator over all (key, value) items in R where key
+        begins with key_prefix.
+        """
         cdef mtbl_res res
         cdef uint8_t *key
         cdef size_t len_key
@@ -249,6 +277,7 @@ cdef class reader(DictMixin):
         return get_iteritems(mtbl_reader_get_prefix(self._instance, key, len_key))
 
     def __getitem__(self, bytes py_key):
+        """x.__getitem__(y) <==> x[y]"""
         cdef mtbl_res res
         cdef uint8_t *key
         cdef uint8_t *val
@@ -266,6 +295,14 @@ cdef class reader(DictMixin):
         raise KeyError(py_key)
 
 cdef class writer(object):
+    """
+    writer(fname) -> new MTBL writer, output to file fname
+
+    Keyword arguments:
+    compression -- compression type (default COMPRESSION_NONE)
+    block_size -- maximum data block size in bytes (default 8192)
+    block_restart_interval -- how frequently to restart key prefix compression (default 16)
+    """
     cdef mtbl_writer *_instance
 
     def __cinit__(self):
@@ -276,7 +313,7 @@ cdef class writer(object):
 
     def __init__(self,
             bytes fname,
-            mtbl_compression_type compression=MTBL_COMPRESSION_NONE,
+            mtbl_compression_type compression=COMPRESSION_NONE,
             size_t block_size=8192,
             size_t block_restart_interval=16):
         if not (compression == COMPRESSION_NONE or
@@ -295,9 +332,17 @@ cdef class writer(object):
             raise IOError("unable to initialize file: '%s'" % fname)
 
     def close(self):
+        """W.close() -- finalize and close the writer"""
         mtbl_writer_destroy(&self._instance)
 
     def __setitem__(self, bytes py_key, bytes py_val):
+        """
+        W.__setitem__(key, value) <==> W[key] = value
+
+        Adds a new (key, value) entry to the writer. key and value must be byte
+        strings, and key must be lexicographically greater than any previously
+        written key.
+        """
         cdef mtbl_res res
         cdef uint8_t *key
         cdef uint8_t *val
@@ -338,6 +383,15 @@ cdef void merge_func_wrapper(void *clos,
     memcpy(merged_val[0], PyString_AsString(py_merged_val), len_merged_val[0])
 
 cdef class merger(object):
+    """
+    merger(merge_func) -> new MTBL merger
+
+    merge_func is the user-supplied value merging function:
+
+        merge_func(key, val0, val1) -> merged_val
+
+    all parameters are byte strings, and the return value must be a byte string.
+    """
     cdef mtbl_merger *_instance
 
     def __cinit__(self):
@@ -356,6 +410,7 @@ cdef class merger(object):
         mtbl_merger_options_destroy(&opt)
 
     def add_reader(self, reader r):
+        """M.add_reader(mtbl.reader) -- add a reader object as a merge input"""
         cdef mtbl_res res
 
         res = mtbl_merger_add_reader(self._instance, r._instance)
@@ -364,6 +419,7 @@ cdef class merger(object):
         r._instance = NULL
 
     def write(self, writer w):
+        """M.write(mtbl.writer) -- dump merged output to writer"""
         cdef mtbl_res res
 
         res = mtbl_merger_write(self._instance, w._instance)
@@ -374,15 +430,31 @@ cdef class merger(object):
         return self.iterkeys()
 
     def iterkeys(self):
+        """M.iterkeys() -> an iterator over the merged keys of M."""
         return get_iterkeys(mtbl_merger_iter(self._instance))
 
     def itervalues(self):
+        """M.itervalues() -> an iterator over the merged values of M."""
         return get_itervalues(mtbl_merger_iter(self._instance))
 
     def iteritems(self):
+        """M.iteritems() -> an iterator over the merged (key, value) items of M."""
         return get_iteritems(mtbl_merger_iter(self._instance))
 
 cdef class sorter(object):
+    """
+    sorter(merge_func) -> new MTBL sorter
+
+    merge_func is the user-supplied value merging function:
+
+        merge_func(key, val0, val1) -> merged_val
+
+    all parameters are byte strings, and the return value must be a byte string.
+
+    Keyword arguments:
+    temp_dir -- temporary directory (default "/var/tmp")
+    max_memory -- maxmimum amount of memory for in-memory sorting in bytes (default 1 GB)
+    """
     cdef mtbl_sorter *_instance
 
     def __cinit__(self):
@@ -406,6 +478,7 @@ cdef class sorter(object):
         mtbl_sorter_options_destroy(&opt)
 
     def write(self, writer w):
+        """S.write(mtbl.writer) -- dump sorted output to writer"""
         cdef mtbl_res res
 
         res = mtbl_sorter_write(self._instance, w._instance)
@@ -413,6 +486,13 @@ cdef class sorter(object):
             raise RuntimeError
 
     def __setitem__(self, bytes py_key, bytes py_val):
+        """
+        S.__setitem__(key, value) <==> S[key] = value
+
+        Adds a new (key, value) item to the sorter. If the key already exists,
+        the user-supplied merge function will be called to merge the
+        conflicting values.
+        """
         cdef mtbl_res res
         cdef uint8_t *key
         cdef uint8_t *val
@@ -439,10 +519,13 @@ cdef class sorter(object):
         return self.iterkeys()
 
     def iterkeys(self):
+        """S.iterkeys() -> an iterator over the sorted keys of R."""
         return get_iterkeys(mtbl_sorter_iter(self._instance))
 
     def itervalues(self):
+        """S.itervalues() -> an iterator over the sorted values of R."""
         return get_itervalues(mtbl_sorter_iter(self._instance))
 
     def iteritems(self):
+        """S.iteritems() -> an iterator over the sorted (key, value) items of R."""
         return get_iteritems(mtbl_sorter_iter(self._instance))
