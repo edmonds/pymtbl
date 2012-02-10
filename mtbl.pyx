@@ -186,7 +186,7 @@ cdef class reader(DictMixin):
         if (self._instance == NULL):
             raise IOError("unable to open file: '%s'" % fname)
 
-    def check_initialized(self):
+    cdef check_initialized(self):
         if self._instance == NULL:
             raise UninitializedException
 
