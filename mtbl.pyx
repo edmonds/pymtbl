@@ -393,6 +393,7 @@ cdef class merger(object):
     all parameters are byte strings, and the return value must be a byte string.
     """
     cdef mtbl_merger *_instance
+    cdef set _references
 
     def __cinit__(self):
         self._instance = NULL
@@ -408,10 +409,12 @@ cdef class merger(object):
                                            <void *> merge_func)
         self._instance = mtbl_merger_init(opt)
         mtbl_merger_options_destroy(&opt)
+        self._references = set()
 
     def add_reader(self, reader r):
         """M.add_reader(mtbl.reader) -- add a reader object as a merge input"""
         mtbl_merger_add_reader(self._instance, r._instance)
+        self._references.add(r)
 
     def write(self, writer w):
         """M.write(mtbl.writer) -- dump merged output to writer"""
