@@ -439,6 +439,51 @@ cdef class merger(object):
         """M.iteritems() -> an iterator over the merged (key, value) items of M."""
         return get_iteritems(mtbl_merger_iter(self._instance))
 
+    def get(self, bytes py_key):
+        """
+        M.get(key) -> an iterator over all (key, value) items in M which match key.
+        """
+        cdef mtbl_res res
+        cdef uint8_t *key
+        cdef size_t len_key
+
+        key = <uint8_t *> PyString_AsString(py_key)
+        len_key = PyString_Size(py_key)
+
+        return get_iteritems(mtbl_merger_get(self._instance, key, len_key))
+
+    def get_range(self, bytes py_key0, bytes py_key1):
+        """
+        M.get_range(key0, key1) -> an iterator over all (key, value) items in M where key is
+        between key0 and key1 inclusive.
+        """
+        cdef mtbl_res res
+        cdef uint8_t *key0
+        cdef uint8_t *key1
+        cdef size_t len_key0
+        cdef size_t len_key1
+
+        key0 = <uint8_t *> PyString_AsString(py_key0)
+        key1 = <uint8_t *> PyString_AsString(py_key1)
+        len_key0 = PyString_Size(py_key0)
+        len_key1 = PyString_Size(py_key1)
+
+        return get_iteritems(mtbl_merger_get_range(self._instance, key0, len_key0, key1, len_key1))
+
+    def get_prefix(self, bytes py_key):
+        """
+        M.get_prefix(key_prefix) -> an iterator over all (key, value) items in M where key
+        begins with key_prefix.
+        """
+        cdef mtbl_res res
+        cdef uint8_t *key
+        cdef size_t len_key
+
+        key = <uint8_t *> PyString_AsString(py_key)
+        len_key = PyString_Size(py_key)
+
+        return get_iteritems(mtbl_merger_get_prefix(self._instance, key, len_key))
+
 cdef class sorter(object):
     """
     sorter(merge_func) -> new MTBL sorter
