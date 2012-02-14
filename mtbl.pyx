@@ -411,12 +411,7 @@ cdef class merger(object):
 
     def add_reader(self, reader r):
         """M.add_reader(mtbl.reader) -- add a reader object as a merge input"""
-        cdef mtbl_res res
-
-        res = mtbl_merger_add_reader(self._instance, r._instance)
-        if res != mtbl_res_success:
-            raise RuntimeError
-        r._instance = NULL
+        mtbl_merger_add_reader(self._instance, r._instance)
 
     def write(self, writer w):
         """M.write(mtbl.writer) -- dump merged output to writer"""

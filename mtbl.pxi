@@ -67,7 +67,7 @@ cdef extern from "mtbl.h":
     # merger
     mtbl_merger *mtbl_merger_init(mtbl_merger_options *)
     void mtbl_merger_destroy(mtbl_merger **)
-    mtbl_res mtbl_merger_add_reader(mtbl_merger *, mtbl_reader *)
+    void mtbl_merger_add_reader(mtbl_merger *, mtbl_reader *)
     mtbl_res mtbl_merger_write(mtbl_merger *, mtbl_writer *)
     mtbl_iter *mtbl_merger_iter(mtbl_merger *)
 
