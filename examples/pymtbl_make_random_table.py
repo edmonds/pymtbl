@@ -18,9 +18,11 @@ def main(fname, num_keys):
     last = a
     total_bytes = 0
     count = 0
+    total = 0
     while count < num_keys:
         count += 1
         if random.random() >= 0.5:
+            total += 1
             key = '%010d' % count
             val = random.choice(string.ascii_lowercase) * random.randint(1, 50)
             writer[key] = val
@@ -30,7 +32,7 @@ def main(fname, num_keys):
             last_secs = b - last
             last = b
             sys.stderr.write('wrote %s entries (%s MB) in %s seconds, %s entries/second\n' % (
-                locale.format('%d', count, grouping=True),
+                locale.format('%d', total, grouping=True),
                 locale.format('%d', total_bytes / megabyte, grouping=True),
                 locale.format('%f', last_secs, grouping=True),
                 locale.format('%d', report_interval / last_secs, grouping=True)
@@ -39,10 +41,10 @@ def main(fname, num_keys):
     b = time.time()
     total_secs = b - a
     sys.stderr.write('wrote %s total entries (%s MB) in %s seconds, %s entries/second\n' % (
-        locale.format('%d', count, grouping=True),
+        locale.format('%d', total, grouping=True),
         locale.format('%d', total_bytes / megabyte, grouping=True),
         locale.format('%f', total_secs, grouping=True),
-        locale.format('%d', count / total_secs, grouping=True)
+        locale.format('%d', total / total_secs, grouping=True)
         )
     )
 
