@@ -18,6 +18,8 @@ cdef extern from "mtbl.h":
 
     struct mtbl_iter:
         pass
+    struct mtbl_source:
+        pass
     struct mtbl_reader:
         pass
     struct mtbl_reader_options:
@@ -41,13 +43,16 @@ cdef extern from "mtbl.h":
     void mtbl_iter_destroy(mtbl_iter **)
     mtbl_res mtbl_iter_next(mtbl_iter *, uint8_t **, size_t *, uint8_t **, size_t *)
 
+    # source
+    mtbl_iter *mtbl_source_get_range(mtbl_source *, uint8_t *, size_t, uint8_t *, size_t)
+    mtbl_iter *mtbl_source_get_prefix(mtbl_source *, uint8_t *, size_t)
+
     # reader
     mtbl_reader *mtbl_reader_init(char *, mtbl_reader_options *)
     void mtbl_reader_destroy(mtbl_reader **)
     mtbl_res mtbl_reader_get(mtbl_reader *, uint8_t *, size_t, uint8_t **, size_t *)
     mtbl_iter *mtbl_reader_iter(mtbl_reader *)
-    mtbl_iter *mtbl_reader_get_range(mtbl_reader *, uint8_t *, size_t, uint8_t *, size_t)
-    mtbl_iter *mtbl_reader_get_prefix(mtbl_reader *, uint8_t *, size_t)
+    mtbl_source *mtbl_reader_source(mtbl_reader *)
 
     mtbl_reader_options *mtbl_reader_options_init()
     void mtbl_reader_options_destroy(mtbl_reader_options **)
@@ -71,8 +76,7 @@ cdef extern from "mtbl.h":
     mtbl_res mtbl_merger_write(mtbl_merger *, mtbl_writer *)
     mtbl_iter *mtbl_merger_iter(mtbl_merger *)
     mtbl_iter *mtbl_merger_get(mtbl_merger *, uint8_t *, size_t)
-    mtbl_iter *mtbl_merger_get_range(mtbl_merger *, uint8_t *, size_t, uint8_t *, size_t)
-    mtbl_iter *mtbl_merger_get_prefix(mtbl_merger *, uint8_t *, size_t)
+    mtbl_source *mtbl_merger_source(mtbl_merger *)
 
     mtbl_merger_options *mtbl_merger_options_init()
     void mtbl_merger_options_destroy(mtbl_merger_options **)

@@ -258,7 +258,8 @@ cdef class reader(DictMixin):
         len_key0 = PyString_Size(py_key0)
         len_key1 = PyString_Size(py_key1)
 
-        return get_iteritems(mtbl_reader_get_range(self._instance, key0, len_key0, key1, len_key1))
+        return get_iteritems(mtbl_source_get_range(
+            mtbl_reader_source(self._instance), key0, len_key0, key1, len_key1))
 
     def get_prefix(self, bytes py_key):
         """
@@ -274,7 +275,8 @@ cdef class reader(DictMixin):
         key = <uint8_t *> PyString_AsString(py_key)
         len_key = PyString_Size(py_key)
 
-        return get_iteritems(mtbl_reader_get_prefix(self._instance, key, len_key))
+        return get_iteritems(mtbl_source_get_prefix(
+            mtbl_reader_source(self._instance), key, len_key))
 
     def __getitem__(self, bytes py_key):
         """x.__getitem__(y) <==> x[y]"""
@@ -468,7 +470,8 @@ cdef class merger(object):
         len_key0 = PyString_Size(py_key0)
         len_key1 = PyString_Size(py_key1)
 
-        return get_iteritems(mtbl_merger_get_range(self._instance, key0, len_key0, key1, len_key1))
+        return get_iteritems(mtbl_source_get_range(
+            mtbl_merger_source(self._instance), key0, len_key0, key1, len_key1))
 
     def get_prefix(self, bytes py_key):
         """
@@ -482,7 +485,8 @@ cdef class merger(object):
         key = <uint8_t *> PyString_AsString(py_key)
         len_key = PyString_Size(py_key)
 
-        return get_iteritems(mtbl_merger_get_prefix(self._instance, key, len_key))
+        return get_iteritems(mtbl_source_get_prefix(
+            mtbl_merger_source(self._instance), key, len_key))
 
 cdef class sorter(object):
     """
