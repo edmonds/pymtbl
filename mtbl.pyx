@@ -207,17 +207,17 @@ cdef class reader(DictMixin):
     def iterkeys(self):
         """R.iterkeys() -> an iterator over the keys of R."""
         self.check_initialized()
-        return get_iterkeys(mtbl_reader_iter(self._instance))
+        return get_iterkeys(mtbl_source_iter(mtbl_reader_source(self._instance)))
 
     def itervalues(self):
         """R.itervalues() -> an iterator over the values of R."""
         self.check_initialized()
-        return get_itervalues(mtbl_reader_iter(self._instance))
+        return get_itervalues(mtbl_source_iter(mtbl_reader_source(self._instance)))
 
     def iteritems(self):
         """R.iteritems() -> an iterator over the (key, value) items of R."""
         self.check_initialized()
-        return get_iteritems(mtbl_reader_iter(self._instance))
+        return get_iteritems(mtbl_source_iter(mtbl_reader_source(self._instance)))
 
     def __contains__(self, bytes py_key):
         """R.__contains__(k) -> True if R has a key k, else False"""
@@ -279,7 +279,7 @@ cdef class reader(DictMixin):
             mtbl_reader_source(self._instance), key, len_key))
 
     def __getitem__(self, bytes py_key):
-        """x.__getitem__(y) <==> x[y]"""
+        cdef mtbl_iter *it
         cdef mtbl_res res
         cdef uint8_t *key
         cdef uint8_t *val
@@ -291,10 +291,19 @@ cdef class reader(DictMixin):
         key = <uint8_t *> PyString_AsString(py_key)
         len_key = PyString_Size(py_key)
 
-        res = mtbl_reader_get(self._instance, key, len_key, &val, &len_val)
-        if res == mtbl_res_success:
-            return PyString_FromStringAndSize(<char *> val, len_val)
-        raise KeyError(py_key)
+        items = []
+        it = mtbl_source_get(mtbl_reader_source(self._instance), key, len_key)
+        if it == NULL:
+            raise KeyError(py_key)
+        while True:
+            res = mtbl_iter_next(it, &key, &len_key, &val, &len_val)
+            if res == mtbl_res_failure:
+                break
+            items.append(PyString_FromStringAndSize(<char *> val, len_val))
+        mtbl_iter_destroy(&it)
+        if not items:
+            raise KeyError(py_key)
+        return items
 
 cdef class writer(object):
     """
@@ -422,7 +431,7 @@ cdef class merger(object):
         """M.write(mtbl.writer) -- dump merged output to writer"""
         cdef mtbl_res res
 
-        res = mtbl_merger_write(self._instance, w._instance)
+        res = mtbl_source_write(mtbl_merger_source(self._instance), w._instance)
         if res != mtbl_res_success:
             raise RuntimeError
 
@@ -431,15 +440,15 @@ cdef class merger(object):
 
     def iterkeys(self):
         """M.iterkeys() -> an iterator over the merged keys of M."""
-        return get_iterkeys(mtbl_merger_iter(self._instance))
+        return get_iterkeys(mtbl_source_iter(mtbl_merger_source(self._instance)))
 
     def itervalues(self):
         """M.itervalues() -> an iterator over the merged values of M."""
-        return get_itervalues(mtbl_merger_iter(self._instance))
+        return get_itervalues(mtbl_source_iter(mtbl_merger_source(self._instance)))
 
     def iteritems(self):
         """M.iteritems() -> an iterator over the merged (key, value) items of M."""
-        return get_iteritems(mtbl_merger_iter(self._instance))
+        return get_iteritems(mtbl_source_iter(mtbl_merger_source(self._instance)))
 
     def get(self, bytes py_key):
         """
@@ -452,7 +461,7 @@ cdef class merger(object):
         key = <uint8_t *> PyString_AsString(py_key)
         len_key = PyString_Size(py_key)
 
-        return get_iteritems(mtbl_merger_get(self._instance, key, len_key))
+        return get_iteritems(mtbl_source_get(mtbl_merger_source(self._instance), key, len_key))
 
     def get_range(self, bytes py_key0, bytes py_key1):
         """

@@ -44,14 +44,15 @@ cdef extern from "mtbl.h":
     mtbl_res mtbl_iter_next(mtbl_iter *, uint8_t **, size_t *, uint8_t **, size_t *)
 
     # source
+    mtbl_iter *mtbl_source_iter(mtbl_source *)
+    mtbl_iter *mtbl_source_get(mtbl_source *, uint8_t *, size_t)
     mtbl_iter *mtbl_source_get_range(mtbl_source *, uint8_t *, size_t, uint8_t *, size_t)
     mtbl_iter *mtbl_source_get_prefix(mtbl_source *, uint8_t *, size_t)
+    mtbl_res mtbl_source_write(mtbl_source *, mtbl_writer *)
 
     # reader
     mtbl_reader *mtbl_reader_init(char *, mtbl_reader_options *)
     void mtbl_reader_destroy(mtbl_reader **)
-    mtbl_res mtbl_reader_get(mtbl_reader *, uint8_t *, size_t, uint8_t **, size_t *)
-    mtbl_iter *mtbl_reader_iter(mtbl_reader *)
     mtbl_source *mtbl_reader_source(mtbl_reader *)
 
     mtbl_reader_options *mtbl_reader_options_init()
@@ -73,9 +74,6 @@ cdef extern from "mtbl.h":
     mtbl_merger *mtbl_merger_init(mtbl_merger_options *)
     void mtbl_merger_destroy(mtbl_merger **)
     void mtbl_merger_add_reader(mtbl_merger *, mtbl_reader *)
-    mtbl_res mtbl_merger_write(mtbl_merger *, mtbl_writer *)
-    mtbl_iter *mtbl_merger_iter(mtbl_merger *)
-    mtbl_iter *mtbl_merger_get(mtbl_merger *, uint8_t *, size_t)
     mtbl_source *mtbl_merger_source(mtbl_merger *)
 
     mtbl_merger_options *mtbl_merger_options_init()
