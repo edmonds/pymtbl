@@ -1,0 +1,49 @@
+Simple word frequency example using pymtbl
+------------------------------------------
+
+This directory shows a simple "word frequency" application of the pymtbl
+module.  It is driven by a Makefile which downloads several English language
+texts and invokes Python scripts to analyze, merge, and decode data.  Each
+text is analyzed individually and the results are combined to generate an
+overall word frequency table.
+
+Running "make" in this directory should generate an output file "wf.txt". It
+will also generate a file "wf.mtbl" containing the combined word frequencies
+from all of the downloaded texts, as well as several intermediate ".mtbl"
+files containing word frequencies for the individual texts.
+
+This example stores the frequency for each word in MTBL SSTable files where
+each key is a word and its associated value is a varint-encoded integer
+indicating the number of times the word occurred.
+
+Scripts:
+
+* pymtbl_wf_analyze.py: reads an ASCII formatted Project Gutenberg etext
+  (.txt) and generates an MTBL SSTable file (.mtbl) containing words and
+  their frequencies.
+ 
+* pymtbl_wf_merge.py: reads one or more MTBL SSTable files and merges the
+  key-value entries in the input files into a single output. For instance,
+  merging the following two input tables:
+
+    Key      Value
+    "and"        1
+    "or"         2
+    "the"        3
+    (Input table #1)
+
+    Key      Value
+    "and"        2
+    "the"        4
+    (Input table #2)
+
+  Will result in the following merged output table:
+
+    Key      Value
+    "and"        3
+    "or"         2
+    "the"        7
+    (Output table)
+
+* pymtbl_wf_dump.py: decodes the word frequency key-value entries in an MTBL
+  file and prints them to stdout.
