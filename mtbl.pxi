@@ -92,3 +92,11 @@ cdef extern from "mtbl.h":
     void mtbl_sorter_options_set_merge_func(mtbl_sorter_options *, mtbl_merge_func, void *)
     void mtbl_sorter_options_set_temp_dir(mtbl_sorter_options *, char *)
     void mtbl_sorter_options_set_max_memory(mtbl_sorter_options *, size_t)
+
+    # varint
+    unsigned mtbl_varint_length(uint64_t)
+    unsigned mtbl_varint_length_packed(uint8_t *, size_t)
+    size_t mtbl_varint_encode32(uint8_t *, uint32_t)
+    size_t mtbl_varint_encode64(uint8_t *, uint64_t)
+    size_t mtbl_varint_decode32(uint8_t *, uint32_t *)
+    size_t mtbl_varint_decode64(uint8_t *, uint64_t *)

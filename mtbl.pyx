@@ -22,7 +22,44 @@ class UnknownCompressionTypeException(Exception):
 class UninitializedException(Exception):
     pass
 
+class VarintDecodingError(Exception):
+    pass
+
 ImmutableError = TypeError('object does not support mutation')
+
+def varint_length(uint64_t value):
+    """varint_length(v) -> number of bytes the integer v would require in varint encoding."""
+    return mtbl_varint_length(value)
+
+def varint_length_packed(bytes py_buf):
+    """varint_length_packed(b) -> number of varint-packed bytes at the start of b."""
+    cdef uint8_t *buf
+    cdef Py_ssize_t len_buf
+    cdef size_t sz
+    PyString_AsStringAndSize(py_buf, <char **> &buf, &len_buf)
+    sz = mtbl_varint_length_packed(buf, len_buf)
+    if sz == 0:
+        raise VarintDecodingError
+    return sz
+
+def varint_encode(long v):
+    """varint_encode(v) -> encode integer v using packed variable-width encoding."""
+    cdef uint8_t buf[10]
+    cdef size_t sz
+    sz = mtbl_varint_encode64(buf, v)
+    return PyString_FromStringAndSize(<char *> buf, sz)
+
+def varint_decode(bytes py_buf):
+    """varint_decode(b) -> decode variable-width packed integer from b"""
+    cdef uint64_t val
+    cdef uint8_t *buf
+    cdef Py_ssize_t len_buf
+    cdef size_t bytes_read
+    PyString_AsStringAndSize(py_buf, <char **> &buf, &len_buf)
+    if mtbl_varint_length_packed(buf, len_buf) == 0:
+        raise VarintDecodingError
+    mtbl_varint_decode64(buf, &val)
+    return val
 
 @cython.internal
 cdef class iterkeys(object):
