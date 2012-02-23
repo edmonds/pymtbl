@@ -424,7 +424,7 @@ cdef class merger(object):
 
     def add_reader(self, reader r):
         """M.add_reader(mtbl.reader) -- add a reader object as a merge input"""
-        mtbl_merger_add_reader(self._instance, r._instance)
+        mtbl_merger_add_source(self._instance, mtbl_reader_source(r._instance))
         self._references.add(r)
 
     def write(self, writer w):
