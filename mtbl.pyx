@@ -7,9 +7,6 @@ COMPRESSION_NONE = MTBL_COMPRESSION_NONE
 COMPRESSION_SNAPPY = MTBL_COMPRESSION_SNAPPY
 COMPRESSION_ZLIB = MTBL_COMPRESSION_ZLIB
 
-class IterException(Exception):
-    pass
-
 class KeyOrderError(Exception):
     pass
 
@@ -72,8 +69,6 @@ cdef class iterkeys(object):
         mtbl_iter_destroy(&self._instance)
 
     def __iter__(self):
-        if self._instance == NULL:
-            raise NotImplementedError
         return self
 
     def __next__(self):
@@ -102,8 +97,6 @@ cdef class itervalues(object):
         mtbl_iter_destroy(&self._instance)
 
     def __iter__(self):
-        if self._instance == NULL:
-            raise NotImplementedError
         return self
 
     def __next__(self):
@@ -132,8 +125,6 @@ cdef class iteritems(object):
         mtbl_iter_destroy(&self._instance)
 
     def __iter__(self):
-        if self._instance == NULL:
-            raise NotImplementedError
         return self
 
     def __next__(self):
@@ -153,22 +144,16 @@ cdef class iteritems(object):
                 PyString_FromStringAndSize(<char *> val, len_val))
 
 cdef get_iterkeys(mtbl_iter *instance):
-    if instance == NULL:
-        raise IterException
     it = iterkeys()
     it._instance = instance
     return it
 
 cdef get_itervalues(mtbl_iter *instance):
-    if instance == NULL:
-        raise IterException
     it = itervalues()
     it._instance = instance
     return it
 
 cdef get_iteritems(mtbl_iter *instance):
-    if instance == NULL:
-        raise IterException
     it = iteritems()
     it._instance = instance
     return it
